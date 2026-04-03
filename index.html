@@ -860,6 +860,10 @@ async function salvarLoja() {
 async function criarAcessoLojista() {
   const email = document.getElementById('lojaEmail').value;
   const lojaId = document.getElementById('lojaId').value;
+  
+  console.log('DEBUG lojaId:', lojaId);
+  console.log('DEBUG lojaIdElement:', document.getElementById('lojaId'));
+  
   const nomeLoja = document.getElementById('lojaNome').value;
   const whatsapp = document.getElementById('lojaWhatsapp').value;
 
