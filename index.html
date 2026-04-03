@@ -226,7 +226,7 @@
   }
   .form-input:focus { border-color: var(--green); }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .form-actions { display: flex; gap: 12px; margin-top: 24px; }
+  .form-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
   .btn-secondary {
     flex: 1;
     padding: 12px;
@@ -403,7 +403,7 @@
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Email (login)</label>
+        <label class="form-label">Email do Lojista *</label>
         <input type="email" class="form-input" id="lojaEmail" placeholder="loja@email.com">
       </div>
       <div class="form-group">
@@ -461,9 +461,11 @@
       <input type="text" class="form-input" id="lojaObs" placeholder="Notas internas...">
     </div>
 
-    <div class="form-actions">
+    <div class="form-actions" style="flex-wrap: wrap;">
       <button class="btn-secondary" onclick="fecharModal('modalLoja')">Cancelar</button>
       <button class="btn-save" onclick="salvarLoja()">💾 Salvar Loja</button>
+      <button id="btnCriarAcesso" style="display:none;margin-top:10px;width:100%;padding:12px;background:#3498db;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;" onclick="criarAcessoLojista()">📧 Criar Acesso e Enviar Convite</button>
+      <div id="msgAcesso" style="margin-top:8px;font-size:13px;text-align:center;width:100%;"></div>
     </div>
   </div>
 </div>
@@ -781,6 +783,8 @@ function abrirModalLoja() {
   document.getElementById('lojaEntrada').value = new Date().toISOString().split('T')[0];
   const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
   document.getElementById('lojaVencimento').value = nextMonth.toISOString().split('T')[0];
+  document.getElementById('btnCriarAcesso').style.display = 'none';
+  document.getElementById('msgAcesso').textContent = '';
   document.getElementById('modalLoja').classList.add('active');
 }
 
@@ -791,6 +795,7 @@ async function editarLoja(id) {
   document.getElementById('lojaId').value = l.id;
   document.getElementById('lojaNome').value = l.nome || '';
   document.getElementById('lojaWhatsapp').value = l.whatsapp || '';
+  document.getElementById('lojaEmail').value = l.email || '';
   document.getElementById('lojaRua').value = l.rua || l.endereco || '';
   document.getElementById('lojaBairro').value = l.bairro || '';
   document.getElementById('lojaCep').value = l.cep || '';
@@ -800,14 +805,24 @@ async function editarLoja(id) {
   document.getElementById('lojaEntrada').value = l.data_entrada || '';
   document.getElementById('lojaVencimento').value = l.data_vencimento || '';
   document.getElementById('lojaCategoria').value = l.categoria_loja_id || '';
+  
+  if (l.email) {
+    document.getElementById('btnCriarAcesso').style.display = 'block';
+    document.getElementById('msgAcesso').textContent = '';
+  } else {
+    document.getElementById('btnCriarAcesso').style.display = 'none';
+  }
+
   document.getElementById('modalLoja').classList.add('active');
 }
 
 async function salvarLoja() {
   const id = document.getElementById('lojaId').value;
+  const email = document.getElementById('lojaEmail').value;
   const dados = {
     nome: document.getElementById('lojaNome').value,
     whatsapp: document.getElementById('lojaWhatsapp').value,
+    email: email,
     rua: document.getElementById('lojaRua').value,
     endereco: document.getElementById('lojaRua').value,
     bairro: document.getElementById('lojaBairro').value,
@@ -825,11 +840,101 @@ async function salvarLoja() {
   if (id) {
     await sb.from('lojas').update(dados).eq('id', id);
   } else {
-    await sb.from('lojas').insert(dados);
+    const { data } = await sb.from('lojas').insert(dados).select().single();
+    if (data) {
+      document.getElementById('lojaId').value = data.id;
+    }
   }
 
-  fecharModal('modalLoja');
+  // Mostra botão de criar acesso se tem email
+  if (email) {
+    document.getElementById('btnCriarAcesso').style.display = 'block';
+    document.getElementById('msgAcesso').textContent = '✅ Loja salva! Clique em "Criar Acesso" para enviar convite ao lojista.';
+    document.getElementById('msgAcesso').style.color = 'green';
+  } else {
+    fecharModal('modalLoja');
+  }
   carregarTudo();
+}
+
+async function criarAcessoLojista() {
+  const email = document.getElementById('lojaEmail').value;
+  const lojaId = document.getElementById('lojaId').value;
+  const nomeLoja = document.getElementById('lojaNome').value;
+
+  if (!email) {
+    document.getElementById('msgAcesso').textContent = '❌ Email obrigatório!';
+    document.getElementById('msgAcesso').style.color = 'red';
+    return;
+  }
+
+  document.getElementById('btnCriarAcesso').textContent = '⏳ Criando acesso...';
+  document.getElementById('btnCriarAcesso').disabled = true;
+
+  // Cria usuário via Supabase Admin API
+  const response = await fetch('https://aqbzqpnkhmssgsesobou.supabase.co/auth/v1/admin/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': 'sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr',
+      'Authorization': 'Bearer sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr'
+    },
+    body: JSON.stringify({
+      email: email,
+      email_confirm: true,
+      send_confirmation: false
+    })
+  });
+
+  const result = await response.json();
+
+  if (result.error || !result.id) {
+    // Usuário já existe — só envia o link
+    document.getElementById('msgAcesso').textContent = '⚠️ Usuário já existe. Enviando link de redefinição...';
+  } else {
+    // Vincula user_id à loja
+    await sb.from('lojas').update({ user_id: result.id }).eq('id', lojaId);
+  }
+
+  // Envia email de redefinição de senha
+  const resetResponse = await fetch('https://aqbzqpnkhmssgsesobou.supabase.co/auth/v1/admin/users', {
+    method: 'GET',
+    headers: {
+      'apikey': 'sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr',
+      'Authorization': 'Bearer sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr'
+    }
+  });
+
+  // Envia magic link pro lojista
+  const magicResponse = await fetch('https://aqbzqpnkhmssgsesobou.supabase.co/auth/v1/admin/generate_link', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': 'sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr',
+      'Authorization': 'Bearer sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr'
+    },
+    body: JSON.stringify({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirect_to: 'https://promomutum-painel.vercel.app'
+      }
+    })
+  });
+
+  const magicResult = await magicResponse.json();
+
+  document.getElementById('btnCriarAcesso').disabled = false;
+  document.getElementById('btnCriarAcesso').textContent = '📧 Criar Acesso e Enviar Convite';
+
+  if (magicResult.properties || magicResult.action_link) {
+    document.getElementById('msgAcesso').style.color = 'green';
+    document.getElementById('msgAcesso').textContent = '✅ Convite enviado para ' + email + '! O lojista vai receber um link para definir a senha.';
+    setTimeout(function() { fecharModal('modalLoja'); }, 3000);
+  } else {
+    document.getElementById('msgAcesso').style.color = 'red';
+    document.getElementById('msgAcesso').textContent = '❌ Erro ao enviar convite: ' + JSON.stringify(magicResult);
+  }
 }
 
 async function toggleLoja(id, ativo) {
