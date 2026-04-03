@@ -278,7 +278,23 @@
     <input type="email" class="login-input" id="loginEmail" placeholder="Email">
     <input type="password" class="login-input" id="loginPass" placeholder="Senha">
     <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div style="text-align:center;margin-top:12px;">
+      <a href="#" onclick="mostrarRecuperacao()" style="font-size:13px;color:var(--green);text-decoration:none;">Esqueceu a senha?</a>
+    </div>
     <div class="login-error" id="loginError"></div>
+
+    <div id="recuperacaoBox" style="display:none;margin-top:16px;border-top:1px solid #eee;padding-top:16px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Redefinir senha</div>
+      <input type="email" class="login-input" id="recEmail" placeholder="Seu email">
+      <button class="login-btn" style="background:#3498db;" onclick="enviarCodigo()">Enviar código</button>
+            
+      <div id="codigoBox" style="display:none;margin-top:12px;">
+        <input type="text" class="login-input" id="recCodigo" placeholder="Cole o código do email">
+        <input type="password" class="login-input" id="recNovaSenha" placeholder="Nova senha">
+        <button class="login-btn" onclick="redefinirSenha()">Salvar nova senha</button>
+      </div>
+      <div class="login-error" id="recError"></div>
+    </div>
   </div>
 </div>
 
@@ -519,6 +535,45 @@ async function fazerLogout() {
   await sb.auth.signOut();
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function mostrarRecuperacao() {
+  var box = document.getElementById('recuperacaoBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+async function enviarCodigo() {
+  var email = document.getElementById('recEmail').value;
+  if (!email) { document.getElementById('recError').textContent = 'Digite seu email.'; return; }
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://promomutum-ceo.vercel.app'
+  });
+    if (error) {
+    document.getElementById('recError').textContent = 'Erro ao enviar. Tente novamente.';
+    return;
+  }
+    document.getElementById('codigoBox').style.display = 'block';
+  document.getElementById('recError').textContent = '';
+  document.getElementById('recError').style.color = 'green';
+  document.getElementById('recError').textContent = '✅ Código enviado! Verifique seu email.';
+}
+
+async function redefinirSenha() {
+  var novaSenha = document.getElementById('recNovaSenha').value;
+  if (!novaSenha || novaSenha.length < 6) {
+    document.getElementById('recError').textContent = 'Senha precisa ter pelo menos 6 caracteres.';
+    return;
+  }
+    const { error } = await sb.auth.updateUser({ password: novaSenha });
+    if (error) {
+    document.getElementById('recError').textContent = 'Erro: ' + error.message;
+    return;
+  }
+    document.getElementById('recError').style.color = 'green';
+  document.getElementById('recError').textContent = '✅ Senha alterada! Faça login.';
+  setTimeout(function() {
+    document.getElementById('recuperacaoBox').style.display = 'none';
+  }, 2000);
 }
 
 async function verificarSessao() {
