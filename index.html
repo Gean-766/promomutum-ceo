@@ -286,11 +286,11 @@
     <div id="recuperacaoBox" style="display:none;margin-top:16px;border-top:1px solid #eee;padding-top:16px;">
       <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Redefinir senha</div>
       <input type="email" class="login-input" id="recEmail" placeholder="Seu email">
-      <button class="login-btn" style="background:#3498db;" onclick="enviarCodigo()">Enviar código</button>
+      <button class="login-btn" style="background:#3498db;" id="enviarCodigoBtn" onclick="enviarCodigo()">Enviar código</button>
             
       <div id="codigoBox" style="display:none;margin-top:12px;">
-        <input type="text" class="login-input" id="recCodigo" placeholder="Cole o código do email">
         <input type="password" class="login-input" id="recNovaSenha" placeholder="Nova senha">
+        <input type="password" class="login-input" id="recConfirmaSenha" placeholder="Confirme a senha">
         <button class="login-btn" onclick="redefinirSenha()">Salvar nova senha</button>
       </div>
       <div class="login-error" id="recError"></div>
@@ -552,27 +552,50 @@ async function enviarCodigo() {
     document.getElementById('recError').textContent = 'Erro ao enviar. Tente novamente.';
     return;
   }
-    document.getElementById('codigoBox').style.display = 'block';
+  
   document.getElementById('recError').textContent = '';
   document.getElementById('recError').style.color = 'green';
   document.getElementById('recError').textContent = '✅ Código enviado! Verifique seu email.';
 }
 
+function mostrarTrocaSenha() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('recuperacaoBox').style.display = 'block';
+  document.getElementById('codigoBox').style.display = 'block';
+  document.getElementById('enviarCodigoBtn').style.display = 'none';
+  document.getElementById('recEmail').style.display = 'none';
+  document.getElementById('recError').style.color = 'green';
+  document.getElementById('recError').textContent = '✅ Link válido! Digite sua nova senha abaixo.';
+}
+
 async function redefinirSenha() {
   var novaSenha = document.getElementById('recNovaSenha').value;
+  var confirmaSenha = document.getElementById('recConfirmaSenha').value;
+    
   if (!novaSenha || novaSenha.length < 6) {
+    document.getElementById('recError').style.color = 'red';
     document.getElementById('recError').textContent = 'Senha precisa ter pelo menos 6 caracteres.';
     return;
   }
-    const { error } = await sb.auth.updateUser({ password: novaSenha });
-    if (error) {
+  if (novaSenha !== confirmaSenha) {
+    document.getElementById('recError').style.color = 'red';
+    document.getElementById('recError').textContent = 'As senhas não coincidem!';
+    return;
+  }
+    
+  const { error } = await sb.auth.updateUser({ password: novaSenha });
+    
+  if (error) {
+    document.getElementById('recError').style.color = 'red';
     document.getElementById('recError').textContent = 'Erro: ' + error.message;
     return;
   }
-    document.getElementById('recError').style.color = 'green';
-  document.getElementById('recError').textContent = '✅ Senha alterada! Faça login.';
+    
+  document.getElementById('recError').style.color = 'green';
+  document.getElementById('recError').textContent = '✅ Senha alterada com sucesso!';
   setTimeout(function() {
     document.getElementById('recuperacaoBox').style.display = 'none';
+    iniciarApp();
   }, 2000);
 }
 
@@ -867,12 +890,20 @@ async function capturarToken() {
     const params = new URLSearchParams(hash.substring(1));
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
     if (accessToken) {
       await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       window.location.hash = '';
+      if (type === 'recovery') {
+        mostrarTrocaSenha();
+        return;
+      }
       iniciarApp();
       return;
     }
+  }
+  if (hash && hash.includes('error=access_denied')) {
+    document.getElementById('loginError').textContent = 'Link expirado. Solicite um novo.';
   }
   verificarSessao();
 }
