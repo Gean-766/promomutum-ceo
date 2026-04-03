@@ -494,7 +494,13 @@
 <script>
 const sb = window.supabase.createClient(
   'https://aqbzqpnkhmssgsesobou.supabase.co',
-  'sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr'
+  'sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr',
+  {
+    auth: {
+      persistSession: true,
+      storageKey: 'promomutum-ceo-session'
+    }
+  }
 );
 
 // LOGIN
@@ -516,9 +522,19 @@ async function fazerLogout() {
 }
 
 async function verificarSessao() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) iniciarApp();
+  const { data } = await sb.auth.getSession();
+  if (data.session) {
+    iniciarApp();
+  }
 }
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'block';
+    carregarTudo();
+  }
+});
 
 function iniciarApp() {
   document.getElementById('loginScreen').style.display = 'none';
