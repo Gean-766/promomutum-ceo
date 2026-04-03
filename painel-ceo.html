@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromoMutum — Painel CEO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --green: #1a7a52;
+    --green-dark: #145f40;
+    --green-light: #e6f4ed;
+    --red: #e74c3c;
+    --red-light: #fdf0ee;
+    --orange: #e67e22;
+    --orange-light: #fef6ec;
+    --blue: #3498db;
+    --blue-light: #ebf5fb;
+    --bg: #f5f3ee;
+    --card: #ffffff;
+    --text: #1c1c1c;
+    --text-sec: #6b6b6b;
+    --text-muted: #a0a0a0;
+    --border: #ece9e1;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* LOGIN */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a7a52, #22a366);
+  }
+  .login-box {
+    background: white;
+    border-radius: 24px;
+    padding: 40px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .login-logo { font-size: 28px; font-weight: 800; color: var(--green); margin-bottom: 4px; }
+  .login-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+  .login-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .login-input:focus { border-color: var(--green); }
+  .login-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .login-btn:hover { background: var(--green-dark); }
+  .login-error { color: var(--red); font-size: 13px; margin-top: 8px; text-align: center; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #1a7a52, #22a366);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-logo { font-size: 20px; font-weight: 800; color: white; }
+  .header-logo span { font-size: 12px; font-weight: 500; opacity: 0.7; margin-left: 6px; }
+  .header-logout { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; }
+
+  /* TABS */
+  .tabs {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 24px;
+    gap: 4px;
+  }
+  .tab {
+    padding: 14px 20px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* MAIN */
+  .main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+  /* DASHBOARD CARDS */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .dash-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .dash-card-icon { font-size: 28px; margin-bottom: 8px; }
+  .dash-card-value { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+  .dash-card-label { font-size: 13px; color: var(--text-sec); }
+  .dash-green .dash-card-value { color: var(--green); }
+  .dash-red .dash-card-value { color: var(--red); }
+  .dash-orange .dash-card-value { color: var(--orange); }
+  .dash-blue .dash-card-value { color: var(--blue); }
+
+  /* SECTION */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title { font-size: 18px; font-weight: 800; }
+  .btn-primary {
+    background: var(--green);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary:hover { background: var(--green-dark); }
+
+  /* TABLE */
+  .table-wrap { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f7f4; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 14px 16px; border-top: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  tr:hover td { background: #fafaf8; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .badge-ativo { background: var(--green-light); color: var(--green); }
+  .badge-inadimplente { background: var(--red-light); color: var(--red); }
+  .badge-cancelado { background: #f0f0f0; color: #999; }
+  .badge-vencendo { background: var(--orange-light); color: var(--orange); }
+
+  /* ACTIONS */
+  .btn-action {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.2s;
+    margin-right: 4px;
+  }
+  .btn-action:hover { border-color: var(--green); color: var(--green); }
+  .btn-action.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* MODAL */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-bg.active { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--green); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-actions { display: flex; gap: 12px; margin-top: 24px; }
+  .btn-secondary {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-save {
+    flex: 2;
+    padding: 12px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* ALERT */
+  .alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .alert-warning { background: var(--orange-light); color: var(--orange); border: 1px solid #f5cba7; }
+
+  /* LOADING */
+  .loading { text-align: center; padding: 40px; color: var(--text-muted); }
+
+  /* PAGE */
+  .page { display: none; }
+  .page.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🏷️ PromoMutum</div>
+    <div class="login-sub">Painel CEO — Acesso Restrito</div>
+    <input type="email" class="login-input" id="loginEmail" placeholder="Email">
+    <input type="password" class="login-input" id="loginPass" placeholder="Senha">
+    <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen" style="display:none;">
+  <div class="header">
+    <div class="header-logo">🏷️ PromoMutum <span>CEO</span></div>
+    <button class="header-logout" onclick="fazerLogout()">Sair</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="trocarTab('dashboard')">📊 Dashboard</button>
+    <button class="tab" onclick="trocarTab('lojas')">🏪 Lojas</button>
+    <button class="tab" onclick="trocarTab('pagamentos')">💰 Pagamentos</button>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="tabDashboard" class="page active">
+      <div class="dash-grid" id="dashCards">
+        <div class="loading">Carregando...</div>
+      </div>
+
+      <div id="alertasVencimento"></div>
+
+      <div class="section-header">
+        <div class="section-title">Visão Geral das Lojas</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Loja</th>
+              <th>Status</th>
+              <th>Vencimento</th>
+              <th>Promoções</th>
+              <th>Última postagem</th>
+            </tr>
+          </thead>
+          <tbody id="dashTable"><tr><td colspan="5" class="loading">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LOJAS -->
+    <div id="tabLojas" class="page">
+      <div class="section-header">
+        <div class="section-title">Lojas Cadastradas</div>
+        <button class="btn-primary" onclick="abrirModalLoja()">+ Nova Loja</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Loja</th>
+              <th>WhatsApp</th>
+              <th>Endereço</th>
+              <th>Entrada</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lojasTable"><tr><td colspan="7" class="loading">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGAMENTOS -->
+    <div id="tabPagamentos" class="page">
+      <div class="section-header">
+        <div class="section-title">Controle de Pagamentos</div>
+        <button class="btn-primary" onclick="abrirModalPagamento()">+ Registrar Pagamento</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Loja</th>
+              <th>Mês Referência</th>
+              <th>Data Pagamento</th>
+              <th>Valor</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="pagamentosTable"><tr><td colspan="5" class="loading">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL LOJA -->
+<div id="modalLoja" class="modal-bg">
+  <div class="modal">
+    <div class="modal-title" id="modalLojaTitle">Nova Loja</div>
+    <input type="hidden" id="lojaId">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome da Loja *</label>
+        <input type="text" class="form-input" id="lojaNome" placeholder="Ex: Mercado Araras">
+      </div>
+      <div class="form-group">
+        <label class="form-label">WhatsApp *</label>
+        <input type="text" class="form-input" id="lojaWhatsapp" placeholder="65999998888">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email (login)</label>
+        <input type="email" class="form-input" id="lojaEmail" placeholder="loja@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select class="form-input" id="lojaCategoria">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Endereço</label>
+      <input type="text" class="form-input" id="lojaRua" placeholder="Rua e número">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Bairro</label>
+        <input type="text" class="form-input" id="lojaBairro" placeholder="Centro">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CEP</label>
+        <input type="text" class="form-input" id="lojaCep" placeholder="78450-000">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Data de Entrada</label>
+        <input type="date" class="form-input" id="lojaEntrada">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vencimento</label>
+        <input type="date" class="form-input" id="lojaVencimento">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Mensalidade (R$)</label>
+        <input type="number" class="form-input" id="lojaMensalidade" value="50">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="lojaStatus">
+          <option value="ativo">Ativo</option>
+          <option value="inadimplente">Inadimplente</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Observações</label>
+      <input type="text" class="form-input" id="lojaObs" placeholder="Notas internas...">
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="fecharModal('modalLoja')">Cancelar</button>
+      <button class="btn-save" onclick="salvarLoja()">💾 Salvar Loja</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAGAMENTO -->
+<div id="modalPagamento" class="modal-bg">
+  <div class="modal">
+    <div class="modal-title">Registrar Pagamento</div>
+
+    <div class="form-group">
+      <label class="form-label">Loja *</label>
+      <select class="form-input" id="pagLoja"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Mês Referência</label>
+        <input type="month" class="form-input" id="pagMes">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data Pagamento</label>
+        <input type="date" class="form-input" id="pagData">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Valor (R$)</label>
+        <input type="number" class="form-input" id="pagValor" value="50">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="pagStatus">
+          <option value="pago">Pago</option>
+          <option value="pendente">Pendente</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="fecharModal('modalPagamento')">Cancelar</button>
+      <button class="btn-save" onclick="salvarPagamento()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient(
+  'https://aqbzqpnkhmssgsesobou.supabase.co',
+  'sb_secret_FjzQZkOSNt2MIVnOmuY21Q_cjXRKvhr'
+);
+
+// LOGIN
+async function fazerLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const pass = document.getElementById('loginPass').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('loginError').textContent = 'Email ou senha incorretos.';
+    return;
+  }
+  iniciarApp();
+}
+
+async function fazerLogout() {
+  await sb.auth.signOut();
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function verificarSessao() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) iniciarApp();
+}
+
+function iniciarApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  carregarTudo();
+}
+
+// TABS
+function trocarTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+// CARREGAR TUDO
+async function carregarTudo() {
+  await Promise.all([carregarDashboard(), carregarLojas(), carregarPagamentos(), carregarCategorias()]);
+}
+
+// DASHBOARD
+async function carregarDashboard() {
+  const { data: lojas } = await sb.from('lojas').select('*, categorias_loja(nome)');
+  const { data: promos } = await sb.from('promocoes').select('loja_id, created_at').eq('ativo', true);
+
+  if (!lojas) return;
+
+  const hoje = new Date();
+  const ativas = lojas.filter(l => l.status_pagamento === 'ativo' && l.plano_ativo);
+  const inadimplentes = lojas.filter(l => l.status_pagamento === 'inadimplente');
+  const vencendo = lojas.filter(l => {
+    if (!l.data_vencimento) return false;
+    const v = new Date(l.data_vencimento);
+    const diff = (v - hoje) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 5;
+  });
+
+  const receitaMes = ativas.length * 50;
+
+  document.getElementById('dashCards').innerHTML = `
+    <div class="dash-card dash-green">
+      <div class="dash-card-icon">🏪</div>
+      <div class="dash-card-value">${ativas.length}</div>
+      <div class="dash-card-label">Lojas Ativas</div>
+    </div>
+    <div class="dash-card dash-red">
+      <div class="dash-card-icon">⚠️</div>
+      <div class="dash-card-value">${inadimplentes.length}</div>
+      <div class="dash-card-label">Inadimplentes</div>
+    </div>
+    <div class="dash-card dash-orange">
+      <div class="dash-card-icon">⏰</div>
+      <div class="dash-card-value">${vencendo.length}</div>
+      <div class="dash-card-label">Vencendo em 5 dias</div>
+    </div>
+    <div class="dash-card dash-blue">
+      <div class="dash-card-icon">💰</div>
+      <div class="dash-card-value">R$${receitaMes}</div>
+      <div class="dash-card-label">Receita Mensal</div>
+    </div>
+  `;
+
+  // Alertas
+  if (vencendo.length > 0) {
+    document.getElementById('alertasVencimento').innerHTML =
+      `<div class="alert alert-warning">⚠️ ${vencendo.length} loja(s) com vencimento nos próximos 5 dias: ${vencendo.map(l => l.nome).join(', ')}</div>`;
+  }
+
+  // Tabela dashboard
+  const rows = lojas.map(l => {
+    const promosLoja = promos ? promos.filter(p => p.loja_id === l.id) : [];
+    const ultimaPost = promosLoja.length > 0
+      ? new Date(promosLoja.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at).toLocaleDateString('pt-BR')
+      : '—';
+    const venc = l.data_vencimento ? new Date(l.data_vencimento).toLocaleDateString('pt-BR') : '—';
+    const status = getBadge(l);
+    return `<tr>
+      <td><strong>${l.nome}</strong></td>
+      <td>${status}</td>
+      <td>${venc}</td>
+      <td>${promosLoja.length} promoções</td>
+      <td>${ultimaPost}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('dashTable').innerHTML = rows || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#aaa;">Nenhuma loja cadastrada</td></tr>';
+}
+
+function getBadge(loja) {
+  const hoje = new Date();
+  if (loja.status_pagamento === 'cancelado') return '<span class="badge badge-cancelado">Cancelado</span>';
+  if (loja.status_pagamento === 'inadimplente') return '<span class="badge badge-inadimplente">Inadimplente</span>';
+  if (loja.data_vencimento) {
+    const v = new Date(loja.data_vencimento);
+    const diff = (v - hoje) / (1000 * 60 * 60 * 24);
+    if (diff < 0) return '<span class="badge badge-inadimplente">Vencido</span>';
+    if (diff <= 5) return '<span class="badge badge-vencendo">Vencendo</span>';
+  }
+  return '<span class="badge badge-ativo">Ativo</span>';
+}
+
+// LOJAS
+async function carregarLojas() {
+  const { data: lojas } = await sb.from('lojas').select('*, categorias_loja(nome)').order('nome');
+  if (!lojas) return;
+
+  const rows = lojas.map(l => {
+    const venc = l.data_vencimento ? new Date(l.data_vencimento).toLocaleDateString('pt-BR') : '—';
+    const entrada = l.data_entrada ? new Date(l.data_entrada).toLocaleDateString('pt-BR') : '—';
+    const end = [l.rua, l.bairro].filter(Boolean).join(', ') || '—';
+    return `<tr>
+      <td><strong>${l.nome}</strong><br><span style="color:#aaa;font-size:12px;">${l.categorias_loja?.nome || ''}</span></td>
+      <td>${l.whatsapp || '—'}</td>
+      <td style="font-size:13px;">${end}</td>
+      <td>${entrada}</td>
+      <td>${venc}</td>
+      <td>${getBadge(l)}</td>
+      <td>
+        <button class="btn-action" onclick="editarLoja('${l.id}')">✏️ Editar</button>
+        <button class="btn-action danger" onclick="toggleLoja('${l.id}', ${l.plano_ativo})">
+          ${l.plano_ativo ? '🙈 Ocultar' : '👁️ Ativar'}
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('lojasTable').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;">Nenhuma loja</td></tr>';
+
+  // Popula select de pagamentos
+  const select = document.getElementById('pagLoja');
+  select.innerHTML = lojas.map(l => `<option value="${l.id}">${l.nome}</option>`).join('');
+}
+
+// CATEGORIAS
+async function carregarCategorias() {
+  const { data } = await sb.from('categorias_loja').select('*').order('nome');
+  if (!data) return;
+  const select = document.getElementById('lojaCategoria');
+  select.innerHTML = '<option value="">Selecione...</option>' +
+    data.map(c => `<option value="${c.id}">${c.icone} ${c.nome}</option>`).join('');
+}
+
+// PAGAMENTOS
+async function carregarPagamentos() {
+  const { data } = await sb.from('pagamentos').select('*, lojas(nome)').order('created_at', { ascending: false });
+  if (!data) return;
+
+  const rows = data.map(p => `<tr>
+    <td><strong>${p.lojas?.nome || '—'}</strong></td>
+    <td>${p.mes_referencia || '—'}</td>
+    <td>${p.data_pagamento ? new Date(p.data_pagamento).toLocaleDateString('pt-BR') : '—'}</td>
+    <td>R$ ${Number(p.valor).toFixed(2)}</td>
+    <td><span class="badge ${p.status === 'pago' ? 'badge-ativo' : 'badge-inadimplente'}">${p.status}</span></td>
+  </tr>`).join('');
+
+  document.getElementById('pagamentosTable').innerHTML = rows || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#aaa;">Nenhum pagamento</td></tr>';
+}
+
+// MODAL LOJA
+function abrirModalLoja() {
+  document.getElementById('modalLojaTitle').textContent = 'Nova Loja';
+  document.getElementById('lojaId').value = '';
+  ['lojaNome','lojaWhatsapp','lojaEmail','lojaRua','lojaBairro','lojaCep','lojaObs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('lojaMensalidade').value = 50;
+  document.getElementById('lojaStatus').value = 'ativo';
+  document.getElementById('lojaEntrada').value = new Date().toISOString().split('T')[0];
+  const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
+  document.getElementById('lojaVencimento').value = nextMonth.toISOString().split('T')[0];
+  document.getElementById('modalLoja').classList.add('active');
+}
+
+async function editarLoja(id) {
+  const { data: l } = await sb.from('lojas').select('*').eq('id', id).single();
+  if (!l) return;
+  document.getElementById('modalLojaTitle').textContent = 'Editar Loja';
+  document.getElementById('lojaId').value = l.id;
+  document.getElementById('lojaNome').value = l.nome || '';
+  document.getElementById('lojaWhatsapp').value = l.whatsapp || '';
+  document.getElementById('lojaRua').value = l.rua || l.endereco || '';
+  document.getElementById('lojaBairro').value = l.bairro || '';
+  document.getElementById('lojaCep').value = l.cep || '';
+  document.getElementById('lojaObs').value = l.observacoes || '';
+  document.getElementById('lojaMensalidade').value = l.valor_mensalidade || 50;
+  document.getElementById('lojaStatus').value = l.status_pagamento || 'ativo';
+  document.getElementById('lojaEntrada').value = l.data_entrada || '';
+  document.getElementById('lojaVencimento').value = l.data_vencimento || '';
+  document.getElementById('lojaCategoria').value = l.categoria_loja_id || '';
+  document.getElementById('modalLoja').classList.add('active');
+}
+
+async function salvarLoja() {
+  const id = document.getElementById('lojaId').value;
+  const dados = {
+    nome: document.getElementById('lojaNome').value,
+    whatsapp: document.getElementById('lojaWhatsapp').value,
+    rua: document.getElementById('lojaRua').value,
+    endereco: document.getElementById('lojaRua').value,
+    bairro: document.getElementById('lojaBairro').value,
+    cep: document.getElementById('lojaCep').value,
+    observacoes: document.getElementById('lojaObs').value,
+    valor_mensalidade: parseFloat(document.getElementById('lojaMensalidade').value),
+    status_pagamento: document.getElementById('lojaStatus').value,
+    data_entrada: document.getElementById('lojaEntrada').value || null,
+    data_vencimento: document.getElementById('lojaVencimento').value || null,
+    categoria_loja_id: document.getElementById('lojaCategoria').value || null,
+    plano_ativo: document.getElementById('lojaStatus').value === 'ativo',
+    ativo: true
+  };
+
+  if (id) {
+    await sb.from('lojas').update(dados).eq('id', id);
+  } else {
+    await sb.from('lojas').insert(dados);
+  }
+
+  fecharModal('modalLoja');
+  carregarTudo();
+}
+
+async function toggleLoja(id, ativo) {
+  await sb.from('lojas').update({ plano_ativo: !ativo, ativo: !ativo }).eq('id', id);
+  carregarLojas();
+  carregarDashboard();
+}
+
+// MODAL PAGAMENTO
+function abrirModalPagamento() {
+  const hoje = new Date();
+  document.getElementById('pagData').value = hoje.toISOString().split('T')[0];
+  document.getElementById('pagMes').value = hoje.toISOString().slice(0,7);
+  document.getElementById('pagValor').value = 50;
+  document.getElementById('modalPagamento').classList.add('active');
+}
+
+async function salvarPagamento() {
+  const lojaId = document.getElementById('pagLoja').value;
+  const dados = {
+    loja_id: lojaId,
+    mes_referencia: document.getElementById('pagMes').value,
+    data_pagamento: document.getElementById('pagData').value,
+    valor: parseFloat(document.getElementById('pagValor').value),
+    status: document.getElementById('pagStatus').value
+  };
+
+  await sb.from('pagamentos').insert(dados);
+
+  // Atualiza vencimento da loja (+1 mês)
+  const novoVenc = new Date(document.getElementById('pagData').value);
+  novoVenc.setMonth(novoVenc.getMonth() + 1);
+  await sb.from('lojas').update({
+    status_pagamento: 'ativo',
+    plano_ativo: true,
+    data_vencimento: novoVenc.toISOString().split('T')[0]
+  }).eq('id', lojaId);
+
+  fecharModal('modalPagamento');
+  carregarTudo();
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+document.getElementById('modalLoja').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal('modalLoja');
+});
+document.getElementById('modalPagamento').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal('modalPagamento');
+});
+
+// INIT
+verificarSessao();
+</script>
+</body>
+</html>
