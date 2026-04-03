@@ -840,9 +840,15 @@ async function salvarLoja() {
   if (id) {
     await sb.from('lojas').update(dados).eq('id', id);
   } else {
-    const { data } = await sb.from('lojas').insert(dados).select().single();
-    if (data) {
-      document.getElementById('lojaId').value = data.id;
+    await sb.from('lojas').insert(dados);
+    // Busca o ID da loja recém criada pelo email
+    const { data: lojaData } = await sb.from('lojas')
+      .select('id')
+      .eq('email', dados.email)
+      .single();
+    if (lojaData) {
+      document.getElementById('lojaId').value = lojaData.id;
+      console.log('ID encontrado:', lojaData.id);
     }
   }
 
