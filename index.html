@@ -271,7 +271,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
     <div class="login-logo">🏷️ PromoMutum</div>
@@ -283,7 +282,6 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="appScreen" style="display:none;">
   <div class="header">
     <div class="header-logo">🏷️ PromoMutum <span>CEO</span></div>
@@ -298,7 +296,6 @@
 
   <div class="main">
 
-    <!-- DASHBOARD -->
     <div id="tabDashboard" class="page active">
       <div class="dash-grid" id="dashCards">
         <div class="loading">Carregando...</div>
@@ -325,7 +322,6 @@
       </div>
     </div>
 
-    <!-- LOJAS -->
     <div id="tabLojas" class="page">
       <div class="section-header">
         <div class="section-title">Lojas Cadastradas</div>
@@ -349,7 +345,6 @@
       </div>
     </div>
 
-    <!-- PAGAMENTOS -->
     <div id="tabPagamentos" class="page">
       <div class="section-header">
         <div class="section-title">Controle de Pagamentos</div>
@@ -374,7 +369,6 @@
   </div>
 </div>
 
-<!-- MODAL LOJA -->
 <div id="modalLoja" class="modal-bg">
   <div class="modal">
     <div class="modal-title" id="modalLojaTitle">Nova Loja</div>
@@ -458,7 +452,6 @@
   </div>
 </div>
 
-<!-- MODAL PAGAMENTO -->
 <div id="modalPagamento" class="modal-bg">
   <div class="modal">
     <div class="modal-title">Registrar Pagamento</div>
@@ -523,8 +516,8 @@ async function fazerLogout() {
 }
 
 async function verificarSessao() {
-  const { data } = await sb.auth.getSession();
-  if (data.session) iniciarApp();
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) iniciarApp();
 }
 
 function iniciarApp() {
@@ -796,8 +789,25 @@ document.getElementById('modalPagamento').addEventListener('click', function(e) 
   if (e.target === this) fecharModal('modalPagamento');
 });
 
+// CAPTURA TOKEN DO MAGIC LINK / RESET
+async function capturarToken() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (accessToken) {
+      await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      window.location.hash = '';
+      iniciarApp();
+      return;
+    }
+  }
+  verificarSessao();
+}
+
 // INIT
-verificarSessao();
+capturarToken();
 </script>
 </body>
 </html>
